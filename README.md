@@ -44,7 +44,7 @@ AppID = YOUR_APP_ID
 GuildID = YOUR_GUILD_ID
 UpdateInterval = 5
 SnapshotInterval = 300
-LoggerWebhookURL = LOGGER_WEBHOOK_URL
+LoggerWebhookUrl = LOGGER_WEBHOOK_URL
 LoggerWebhookUsername = USERNAME_TO_SHOW_AS_WHEN_LOGGING_VIA_WEBHOOK
 ```
 
