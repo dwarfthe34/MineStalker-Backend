@@ -19,15 +19,15 @@ fi
 # Check if build succeeded
 echo "Build succeeded."
 
-read -r -p "Is torsocks installed? [Y/n] " answer
+read -r -p "Is tor installed? [Y/n] " answer
 if [[ ! "$answer" =~ ^[Yy]$ ]]; then
     read -r -p "Install it now? [Y/n] " install_answer
     if [[ "$install_answer" =~ ^[Yy]$ ]]; then
         sudo -v                          # prime sudo credentials up front
         sudo apt update
-        sudo apt install -y torsocks tor
+        sudo apt install -y tor
     else
-        echo "torsocks is required. Exiting."
+        echo "tor is required. Exiting."
         exit 1
     fi
 fi
@@ -35,7 +35,7 @@ fi
 sudo -v
 sudo systemctl enable --now tor
 
-echo "Running executable through torsocks..."
-torsocks ./minestalker
+echo "Running executable (Tor daemon is up; minestalker routes only its scrape requests through it)..."
+./minestalker
 
 kill "$SERVER_PID" 2>/dev/null

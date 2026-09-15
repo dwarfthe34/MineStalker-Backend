@@ -17,12 +17,31 @@ import (
 	"teamacedia/minestalker/internal/tracker"
 
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 var isFirstScrape = true
 var snapshot_interval_seconds = 300 // 5 minutes default ( configurable via config )
 var logger_webhook_url string
 var logger_username string
+
+// torClient is used ONLY for the servers.minetest.net list fetch.
+// Everything else (webhooks, discord, etc.) uses the normal http.Get/DefaultClient.
+var torClient *http.Client
+
+func newTorClient() (*http.Client, error) {
+	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:9050", nil, proxy.Direct)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{
+		Transport: &http.Transport{
+			Dial: dialer.Dial,
+		},
+		Timeout: 30 * time.Second,
+	}, nil
+}
 
 func StartScheduler(update_interval_seconds int, snapshot_interval_seconds_ int, logger_webhook_url_, logger_username_ string) {
 	ticker := time.NewTicker(time.Duration(update_interval_seconds) * time.Second)
@@ -31,6 +50,13 @@ func StartScheduler(update_interval_seconds int, snapshot_interval_seconds_ int,
 	snapshot_interval_seconds = snapshot_interval_seconds_
 	logger_webhook_url = logger_webhook_url_
 	logger_username = logger_username_
+
+	client, err := newTorClient()
+	if err != nil {
+		log.Fatalf("Failed to set up Tor client: %v", err)
+	}
+	torClient = client
+
 	log.Println("Scraper scheduler started, scraping every 5 minutes")
 	Scrape()
 
@@ -59,9 +85,18 @@ func sendEvent(message string) {
 }
 
 func Scrape() {
-	log.Println("Starting scrape of servers.minetest.net list...")
+	log.Println("Starting scrape of servers.minetest.net list (via Tor)...")
 
-	resp, err := http.Get("https://servers.minetest.net/list")
+	if torClient == nil {
+		client, err := newTorClient()
+		if err != nil {
+			log.Printf("Failed to set up Tor client: %v", err)
+			return
+		}
+		torClient = client
+	}
+
+	resp, err := torClient.Get("https://servers.minetest.net/list")
 	if err != nil {
 		log.Printf("Failed to fetch server list: %v", err)
 		return
